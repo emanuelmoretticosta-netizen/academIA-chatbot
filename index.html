@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>AcademIA — Personal Trainer Virtual</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+    :root {
+        --verde: #1a7a4a; --verde-escuro: #145c38; --verde-claro: #22a35e;
+        --fundo: #1e1e1e; --fundo-painel: #2a2a2a; --fundo-msg-bot: #333333;
+        --texto: #ffffff; --texto-secundario: #aaaaaa; --borda: #3a3a3a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--fundo); color: var(--texto); }
+
+    /* LOGIN */
+    #tela-login { position: fixed; inset: 0; background: var(--fundo); display: flex; align-items: center; justify-content: center; z-index: 999; }
+    .login-box { background: var(--fundo-painel); border: 1px solid var(--borda); border-radius: 16px; padding: 40px 48px; text-align: center; width: 360px; }
+    .login-logo { font-size: 32px; font-weight: 700; margin-bottom: 6px; }
+    .login-logo span { color: var(--verde); }
+    .login-sub { color: var(--texto-secundario); font-size: 13px; margin-bottom: 28px; }
+    .login-input { width: 100%; background: var(--fundo); border: 1px solid var(--borda); border-radius: 10px; color: var(--texto); padding: 12px 16px; font-size: 15px; outline: none; margin-bottom: 14px; font-family: inherit; }
+    .login-input:focus { border-color: var(--verde); }
+    .login-btn { width: 100%; background: var(--verde); color: white; border: none; padding: 13px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .login-btn:hover { background: var(--verde-escuro); }
+    .login-erro { color: #ff6b6b; font-size: 13px; margin-top: 10px; display: none; }
+
+    /* APP */
+    .app { display: grid; grid-template-columns: 240px 1fr 260px; height: 100vh; }
+    .sidebar { background: var(--fundo-painel); border-right: 1px solid var(--borda); display: flex; flex-direction: column; padding: 24px 16px; }
+    .logo { display: flex; flex-direction: column; padding-bottom: 16px; border-bottom: 1px solid var(--borda); margin-bottom: 16px; }
+    .logo-text { font-size: 22px; font-weight: 700; }
+    .logo-accent { color: var(--verde); }
+    .logo-sub { font-size: 12px; color: var(--texto-secundario); margin-top: 4px; }
+    .nav { display: flex; flex-direction: column; gap: 4px; }
+    .nav-item { padding: 10px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; color: var(--texto-secundario); transition: background 0.15s; display: block; }
+    .nav-item:hover { background: var(--verde-escuro); color: var(--texto); }
+    .nav-item.active { background: var(--verde); color: var(--texto); font-weight: 600; }
+    .frase-motivacional { margin-top: auto; background: #1a3d2b; border-radius: 12px; padding: 16px; text-align: center; }
+    .frase-motivacional p { color: var(--verde-claro); font-weight: 600; font-size: 13px; }
+    .frase-motivacional span { color: var(--texto-secundario); font-size: 12px; }
+
+    .area-central { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .tela { display: none; flex-direction: column; height: 100%; }
+    .tela.ativa { display: flex; }
+
+    /* CHAT */
+    .chat-header { padding: 20px 28px; border-bottom: 1px solid var(--borda); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .chat-header h1 { font-size: 18px; font-weight: 600; }
+    .chat-header p { font-size: 13px; color: var(--texto-secundario); margin-top: 2px; }
+    .online-badge { background: rgba(26,122,74,0.15); color: var(--verde-claro); font-size: 12px; padding: 6px 12px; border-radius: 20px; }
+    .mensagens { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { display: flex; max-width: 70%; }
+    .msg.bot { align-self: flex-start; }
+    .msg.user { align-self: flex-end; }
+    .bolha { padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+    .bot-bolha { background: var(--fundo-msg-bot); border-bottom-left-radius: 4px; }
+    .user-bolha { background: var(--verde); border-bottom-right-radius: 4px; }
+    .digitando { padding: 0 28px; flex-shrink: 0; }
+    .typing-bolha { display: inline-flex; gap: 4px; padding: 14px 16px; }
+    .typing-bolha span { width: 7px; height: 7px; border-radius: 50%; background: var(--texto-secundario); animation: pulsar 1s infinite ease-in-out; }
+    .typing-bolha span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-bolha span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulsar { 0%,100%{opacity:.3;}50%{opacity:1;} }
+    .chat-input { display: flex; gap: 10px; padding: 16px 28px; border-top: 1px solid var(--borda); flex-shrink: 0; }
+    .chat-input input { flex: 1; background: var(--fundo-msg-bot); border: 1px solid var(--borda); border-radius: 24px; padding: 12px 18px; color: var(--texto); font-size: 14px; outline: none; }
+    .chat-input input:focus { border-color: var(--verde); }
+    .chat-input button { width: 44px; height: 44px; border-radius: 50%; background: var(--verde); color: white; border: none; font-size: 16px; cursor: pointer; }
+    .chat-input button:hover { background: var(--verde-escuro); }
+    .chat-input button:disabled { opacity:.5; cursor:not-allowed; }
+
+    /* PERFIL */
+    .tela-perfil-scroll { overflow-y: auto; padding: 30px 36px; flex: 1; }
+    .label-perfil { display: block; color: var(--texto-secundario); font-size: 13px; margin-bottom: 6px; }
+    .input-perfil { width: 100%; background: var(--fundo); border: 1px solid var(--borda); border-radius: 8px; color: var(--texto); padding: 10px 12px; font-size: 14px; outline: none; transition: border-color .2s; font-family: inherit; }
+    .input-perfil:focus { border-color: var(--verde); }
+
+    /* PLANOS DE TREINO */
+    .treino-card { background: var(--fundo-painel); border: 1px solid var(--borda); border-radius: 14px; padding: 24px; margin-bottom: 20px; max-width: 680px; }
+    .treino-card h3 { color: var(--verde-claro); font-size: 16px; margin-bottom: 16px; }
+    .treino-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .treino-tab { padding: 7px 18px; border-radius: 8px; border: 1px solid var(--borda); background: var(--fundo-msg-bot); color: var(--texto-secundario); cursor: pointer; font-size: 14px; transition: all .15s; }
+    .treino-tab:hover { border-color: var(--verde); color: var(--texto); }
+    .treino-tab.ativo { background: var(--verde); color: white; border-color: var(--verde); font-weight: 600; }
+
+    /* LISTA DE EXERCÍCIOS */
+    .exercicio-item { border: 1px solid var(--borda); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+    .exercicio-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; background: var(--fundo-msg-bot); transition: background .15s; user-select: none; }
+    .exercicio-header:hover { background: #3a3a3a; }
+    .exercicio-icone { font-size: 20px; flex-shrink: 0; }
+    .exercicio-info { flex: 1; }
+    .exercicio-nome { font-size: 14px; font-weight: 500; color: var(--texto); }
+    .exercicio-meta { font-size: 12px; color: var(--texto-secundario); margin-top: 2px; }
+    .exercicio-seta { color: var(--verde-claro); font-size: 16px; transition: transform .2s; }
+    .exercicio-seta.aberto { transform: rotate(90deg); }
+    .exercicio-video { display: none; background: #111; }
+    .exercicio-video.aberto { display: block; }
+    .exercicio-video iframe { width: 100%; height: 280px; border: none; display: block; }
+
+    .btn-concluir { width: 100%; margin-top: 16px; padding: 14px; background: var(--verde); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-concluir:hover { background: var(--verde-escuro); }
+    .btn-concluir:disabled { opacity:.5; cursor:not-allowed; }
+    .msg-concluido { text-align: center; color: var(--verde-claro); font-size: 14px; margin-top: 12px; display: none; }
+
+    /* PAINEL DIREITO */
+    .painel-perfil { background: var(--fundo-painel); border-left: 1px solid var(--borda); padding: 24px 18px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+    .perfil-card { text-align: center; }
+    .avatar { width: 60px; height: 60px; border-radius: 50%; background: #1a3d6e; color: #5ba3f5; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; margin: 0 auto 10px; overflow: hidden; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .perfil-card h2 { font-size: 15px; font-weight: 600; }
+    .nivel { display: inline-block; background: rgba(26,122,74,.2); color: var(--verde-claro); font-size: 11px; padding: 3px 10px; border-radius: 20px; margin: 6px 0; }
+    .xp-bar-wrap { background: var(--borda); border-radius: 4px; height: 6px; margin: 4px 0 2px; }
+    .xp-bar-fill { height: 100%; background: var(--verde); border-radius: 4px; transition: width .4s ease; }
+    .xp-label { font-size: 11px; color: var(--texto-secundario); }
+    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .stat { background: var(--fundo-msg-bot); border-radius: 10px; text-align: center; padding: 10px 4px; }
+    .stat strong { display: block; font-size: 16px; }
+    .stat span { font-size: 11px; color: var(--texto-secundario); }
+    .label { font-size: 11px; color: var(--texto-secundario); text-transform: uppercase; letter-spacing: .5px; }
+    .conquista { background: var(--fundo-msg-bot); border-radius: 10px; padding: 12px; display: flex; gap: 10px; align-items: center; }
+    .conquista .icone { font-size: 22px; }
+    .conquista strong { display: block; font-size: 13px; }
+    .conquista span { font-size: 11px; color: var(--texto-secundario); }
+    .btn-sair { margin-top: 8px; width: 100%; background: transparent; color: var(--texto-secundario); border: 1px solid var(--borda); padding: 8px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+    .btn-sair:hover { background: #3a1a1a; color: #ff6b6b; border-color: #ff6b6b; }
+
+
+    /* AVALIAÇÃO POR ESTRELAS */
+    .avaliacao-estrelas { display: none; margin-top: 14px; padding: 16px; background: #1a3d2b; border-radius: 10px; text-align: center; }
+    .avaliacao-estrelas p { color: var(--verde-claro); font-size: 14px; margin-bottom: 10px; font-weight: 600; }
+    .estrelas-wrap { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+    .estrela-btn { font-size: 32px; cursor: pointer; color: #555; transition: color .15s, transform .1s; background: none; border: none; padding: 0; }
+    .estrela-btn:hover, .estrela-btn.ativa { color: #f5a623; }
+    .estrela-btn:hover { transform: scale(1.2); }
+    .btn-salvar-nota { background: var(--verde); color: white; border: none; padding: 10px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-salvar-nota:hover { background: var(--verde-escuro); }
+    .btn-salvar-nota:disabled { opacity: .5; cursor: not-allowed; }
+    @media (max-width:900px) { .app { grid-template-columns: 1fr; } .sidebar,.painel-perfil { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="tela-login">
+    <div class="login-box">
+        <div class="login-logo">Academ<span>IA</span></div>
+        <p class="login-sub">Seu personal trainer virtual 💪</p>
+        <input type="text" id="login-usuario" class="login-input"
+               placeholder="Digite seu nome de usuário" autocomplete="off"
+               onkeypress="if(event.key==='Enter') fazerLogin()">
+        <button class="login-btn" onclick="fazerLogin()">Entrar →</button>
+        <p class="login-erro" id="login-erro">Por favor, digite um nome de usuário.</p>
+    </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app-principal" style="display:none;">
+
+    <aside class="sidebar">
+        <div class="logo">
+            <span class="logo-text">Academ<span class="logo-accent">IA</span></span>
+            <span class="logo-sub">Seu personal trainer virtual</span>
+        </div>
+        <nav class="nav">
+            <div class="nav-item active" onclick="trocarTela('chat',this)">💬 Chat</div>
+            <div class="nav-item"        onclick="trocarTela('perfil',this)">👤 Meu Perfil</div>
+            <div class="nav-item"        onclick="trocarTela('planos',this)">📋 Planos de Treino</div>
+            <div class="nav-item"        onclick="trocarTela('historico',this)">📅 Histórico</div>
+            <div class="nav-item"        onclick="trocarTela('progresso',this)">📈 Progresso</div>
+            <div class="nav-item"        onclick="trocarTela('conquistas',this)">🏆 Conquistas</div>
+        </nav>
+        <div class="frase-motivacional">
+            <p>Foco. Disciplina. Constância.</p>
+            <span>O resultado é consequência!</span>
+        </div>
+    </aside>
+
+    <div class="area-central">
+
+        <!-- CHAT -->
+        <div id="tela-chat" class="tela ativa">
+            <header class="chat-header">
+                <div><h1 id="chat-titulo">Olá! 👋</h1><p>Como posso te ajudar hoje?</p></div>
+                <div class="online-badge">● Online</div>
+            </header>
+            <div id="mensagens" class="mensagens"></div>
+            <div id="digitando" class="digitando" style="display:none;">
+                <div class="bolha bot-bolha typing-bolha"><span></span><span></span><span></span></div>
+            </div>
+            <footer class="chat-input">
+                <input type="text" id="campo-mensagem" placeholder="Digite sua mensagem..." autocomplete="off">
+                <button id="botao-enviar">➤</button>
+            </footer>
+        </div>
+
+        <!-- PERFIL -->
+        <div id="tela-perfil" class="tela">
+            <div class="tela-perfil-scroll">
+                <h2 style="color:var(--verde-claro);margin-bottom:24px;">👤 Meu Perfil</h2>
+                <div style="display:flex;align-items:center;gap:20px;margin-bottom:30px;">
+                    <div id="avatar-container" style="width:80px;height:80px;border-radius:50%;background-color:var(--verde);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;color:white;overflow:hidden;flex-shrink:0;">
+                        <span id="avatar-iniciais">?</span>
+                        <img id="avatar-img" src="" alt="foto" style="display:none;width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <div>
+                        <p style="color:var(--texto-secundario);font-size:13px;margin-bottom:8px;">Foto de perfil</p>
+                        <label for="input-foto" style="cursor:pointer;background:var(--verde-escuro);color:white;padding:8px 16px;border-radius:8px;font-size:13px;border:1px solid var(--verde);">📷 Escolher foto</label>
+                        <input type="file" id="input-foto" accept="image/*" style="display:none;" onchange="preVisualizarFoto(event)">
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:600px;">
+                    <div style="grid-column:1/-1;"><label class="label-perfil">Nome completo</label><input type="text" id="perfil-nome" class="input-perfil" placeholder="Seu nome"></div>
+                    <div><label class="label-perfil">Idade</label><input type="number" id="perfil-idade" class="input-perfil" placeholder="Ex: 20"></div>
+                    <div><label class="label-perfil">Peso (kg)</label><input type="number" id="perfil-peso" class="input-perfil" placeholder="Ex: 70.5" step="0.1"></div>
+                    <div><label class="label-perfil">Altura (cm)</label><input type="number" id="perfil-altura" class="input-perfil" placeholder="Ex: 170"></div>
+                    <div><label class="label-perfil">Objetivo</label>
+                        <select id="perfil-objetivo" class="input-perfil">
+                            <option value="">Selecione...</option>
+                            <option value="emagrecer">⬇️ Emagrecer</option>
+                            <option value="ganhar_massa">💪 Ganhar massa</option>
+                            <option value="condicionamento">🏃 Condicionamento</option>
+                        </select>
+                    </div>
+                    <div><label class="label-perfil">Local de treino</label>
+                        <select id="perfil-local" class="input-perfil">
+                            <option value="">Selecione...</option>
+                            <option value="casa">🏠 Em casa</option>
+                            <option value="academia">🏋️ Academia</option>
+                        </select>
+                    </div>
+                    <div><label class="label-perfil">Dias de treino por semana</label>
+                        <select id="perfil-dias" class="input-perfil" onchange="atualizarAbasTreino()">
+                            <option value="3">3 dias (Treino A, B e C)</option>
+                            <option value="4">4 dias (Treino A, B, C e D)</option>
+                            <option value="5">5 dias (Treino A, B, C, D e E)</option>
+                        </select>
+                    </div>
+                    <div style="grid-column:1/-1;"><label class="label-perfil">Limitações físicas</label><textarea id="perfil-limitacoes" class="input-perfil" placeholder="Ex: dor no joelho..." rows="3" style="resize:vertical;"></textarea></div>
+                </div>
+                <button onclick="salvarPerfil()" style="margin-top:24px;background:var(--verde);color:white;border:none;padding:12px 32px;border-radius:10px;font-size:15px;cursor:pointer;font-weight:bold;">💾 Salvar perfil</button>
+                <p id="msg-salvo" style="color:var(--verde-claro);margin-top:12px;display:none;">✅ Perfil salvo com sucesso!</p>
+            </div>
+        </div>
+
+        <!-- PLANOS DE TREINO -->
+        <div id="tela-planos" class="tela" style="padding:30px;overflow-y:auto;">
+            <h2 style="color:var(--verde-claro);margin-bottom:20px;">📋 Planos de Treino</h2>
+
+            <!-- Seletor de treino e conclusão -->
+            <div class="treino-card">
+                <!-- ── CRONÔMETRO DE DESCANSO ────────────────────────── -->
+                <div id="container-cronometro"></div>
+
+                <h3>Marcar treino concluído</h3>
+                <div class="treino-tabs">
+                    <button class="treino-tab ativo" onclick="selecionarTreino('A',this)">Treino A</button>
+                    <button class="treino-tab" onclick="selecionarTreino('B',this)">Treino B</button>
+                    <button class="treino-tab" onclick="selecionarTreino('C',this)">Treino C</button>
+                    <button class="treino-tab" onclick="selecionarTreino('D',this)">Treino D</button>
+                    <button class="treino-tab" onclick="selecionarTreino('E',this)">Treino E</button>
+                </div>
+                <button class="btn-concluir" id="btn-concluir" onclick="concluirTreino()">✅ Concluí o treino de hoje!</button>
+                <p class="msg-concluido" id="msg-concluido"></p>
+                <!-- Avaliação por estrelas — aparece após clicar em Concluí o treino -->
+                <div class="avaliacao-estrelas" id="avaliacao-estrelas">
+                    <p>⭐ Como foi o treino? Dê uma nota:</p>
+                    <div class="estrelas-wrap">
+                        <button class="estrela-btn" onclick="selecionarEstrela(1)">★</button>
+                        <button class="estrela-btn" onclick="selecionarEstrela(2)">★</button>
+                        <button class="estrela-btn" onclick="selecionarEstrela(3)">★</button>
+                        <button class="estrela-btn" onclick="selecionarEstrela(4)">★</button>
+                        <button class="estrela-btn" onclick="selecionarEstrela(5)">★</button>
+                    </div>
+                    <button class="btn-salvar-nota" id="btn-salvar-nota" onclick="salvarNota()">💾 Salvar avaliação</button>
+                </div>
+
+            </div>
+
+            <!-- Biblioteca de exercícios com vídeos -->
+            <div class="treino-card">
+                <h3>🎬 Biblioteca de Exercícios</h3>
+                <p style="color:var(--texto-secundario);font-size:13px;margin-bottom:16px;">Clique em um exercício para ver o vídeo de execução correta.</p>
+                <div id="lista-exercicios"></div>
+            </div>
+
+            <!-- Resumo rápido -->
+            <div class="treino-card">
+                <h3>📊 Resumo</h3>
+                <div class="stats-row" style="max-width:400px;">
+                    <div class="stat"><strong id="planos-treinos">--</strong><span>Treinos</span></div>
+                    <div class="stat"><strong id="planos-nivel">--</strong><span>Nível</span></div>
+                    <div class="stat"><strong id="planos-nota">--</strong><span>Nota média</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HISTÓRICO -->
+        <div id="tela-historico" class="tela" style="padding:30px;overflow-y:auto;">
+            <h2 style="color:var(--verde-claro);margin-bottom:12px;">📅 Histórico de Treinos</h2>
+            <p style="color:var(--texto-secundario);margin-bottom:20px;">Avaliações registradas automaticamente:</p>
+            <div id="lista-historico" style="display:flex;flex-direction:column;gap:12px;max-width:600px;">
+                <p style="color:var(--texto-secundario);font-style:italic;">Carregando...</p>
+            </div>
+        </div>
+
+        <!-- PROGRESSO -->
+        <div id="tela-progresso" class="tela" style="padding:30px;overflow-y:auto;">
+            <h2 style="color:var(--verde-claro);margin-bottom:20px;">📈 Progresso</h2>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:500px;margin-bottom:30px;">
+                <div class="stat"><strong id="stat-treinos">--</strong><span>Treinos</span></div>
+                <div class="stat"><strong id="stat-semanas">--</strong><span>Semanas</span></div>
+                <div class="stat"><strong id="stat-nota">--</strong><span>Nota média</span></div>
+            </div>
+            <div style="max-width:600px;background:var(--fundo-painel);border-radius:12px;padding:20px;">
+                <p style="color:var(--texto-secundario);font-size:13px;margin-bottom:14px;">Treinos completados por semana</p>
+                <canvas id="grafico-progresso" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- CONQUISTAS -->
+        <div id="tela-conquistas" class="tela" style="padding:30px;overflow-y:auto;">
+            <h2 style="color:var(--verde-claro);margin-bottom:20px;">🏆 Conquistas</h2>
+            <div id="lista-conquistas" style="display:flex;flex-direction:column;gap:12px;max-width:500px;">
+                <p style="color:var(--texto-secundario);font-style:italic;">Carregando conquistas...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- PAINEL DIREITO -->
+    <aside class="painel-perfil">
+        <div class="perfil-card">
+            <div class="avatar" id="avatar-sidebar">
+                <span id="avatar-sidebar-iniciais">?</span>
+                <img id="avatar-sidebar-img" src="" alt="foto" style="display:none;">
+            </div>
+            <h2 id="nome-sidebar">Carregando...</h2>
+            <span class="nivel" id="nivel-sidebar">Nível 1</span>
+            <div class="xp-bar-wrap"><div class="xp-bar-fill" id="xp-bar" style="width:0%;"></div></div>
+            <p class="xp-label" id="xp-label">0 / 5 treinos</p>
+        </div>
+        <div class="stats-row">
+            <div class="stat"><strong id="sidebar-treinos">0</strong><span>Treinos</span></div>
+            <div class="stat"><strong id="sidebar-semanas">0</strong><span>Semanas</span></div>
+            <div class="stat"><strong id="sidebar-nota">0</strong><span>Nota média</span></div>
+        </div>
+        <span class="label">Última conquista</span>
+        <div class="conquista" id="ultima-conquista">
+            <span class="icone">🏆</span>
+            <div><strong>Continue treinando!</strong><span>Suas conquistas aparecerão aqui.</span></div>
+        </div>
+
+        <!-- ── FRASE MOTIVACIONAL DO DIA ─────────────────────── -->
+        <div id="frase-do-dia" style="background:#1a3d2b;border-radius:10px;padding:12px;line-height:1.5;text-align:center;margin-bottom:4px;"></div>
+
+        <!-- ── INDICADOR DE SEQUÊNCIA (streak) ───────────────── -->
+        <div id="indicador-sequencia" style="display:flex;flex-direction:column;gap:4px;background:var(--fundo-msg-bot);border-radius:10px;padding:12px;text-align:center;">
+            <span style="font-size:12px;color:var(--texto-secundario);">Carregando sequência...</span>
+        </div>
+
+        <!-- ── PRÓXIMO TREINO SUGERIDO ────────────────────────── -->
+        <div id="proximo-treino-sugerido" style="display:flex;flex-direction:column;gap:4px;background:var(--fundo-msg-bot);border-radius:10px;padding:12px;text-align:center;">
+            <span style="font-size:12px;color:var(--texto-secundario);">Carregando sugestão...</span>
+        </div>
+
+                <button class="btn-sair" onclick="sair()">🚪 Sair da conta</button>
+    </aside>
+
+</div>
+
+<script>
+// ══════════════════════════════════════
+// BANCO DE EXERCÍCIOS COM VÍDEOS
+// ══════════════════════════════════════
+
+let EXERCICIOS = [
+    // PEITO
+    { grupo: "💪 Peito", nome: "Supino Reto com Barra", meta: "3x8-10 repetições", videoId: "rT7DgCr-3pg" },
+    { grupo: "💪 Peito", nome: "Supino Inclinado com Halteres", meta: "3x10-12 repetições", videoId: "8iPEnn-ltC8" },
+    { grupo: "💪 Peito", nome: "Flexão de Braço", meta: "3x12-15 repetições", videoId: "IODxDxX7oi4" },
+
+    // COSTAS
+    { grupo: "🏋️ Costas", nome: "Remada Curvada com Barra", meta: "3x8-10 repetições", videoId: "G8l_8chR5BE" },
+    { grupo: "🏋️ Costas", nome: "Puxada Frontal", meta: "3x10-12 repetições", videoId: "CAwf7n6Luuc" },
+    { grupo: "🏋️ Costas", nome: "Levantamento Terra", meta: "4x6-8 repetições", videoId: "op9kVnSso6Q" },
+
+    // PERNAS
+    { grupo: "🦵 Pernas", nome: "Agachamento Livre", meta: "4x8-12 repetições", videoId: "YaXPRqUwItQ" },
+    { grupo: "🦵 Pernas", nome: "Agachamento Goblet", meta: "3x12 repetições", videoId: "MeIiIdhvXT4" },
+    { grupo: "🦵 Pernas", nome: "Leg Press", meta: "3x12-15 repetições", videoId: "IZxyjW7MPJQ" },
+    { grupo: "🦵 Pernas", nome: "Stiff com Halteres", meta: "3x12 repetições", videoId: "1uDiW5--rAE" },
+    { grupo: "🦵 Pernas", nome: "Elevação Pélvica", meta: "3x15 repetições", videoId: "OSkMXyBbFvE" },
+
+    // OMBROS
+    { grupo: "🤸 Ombros", nome: "Desenvolvimento com Halteres", meta: "3x10-12 repetições", videoId: "qEwKCR5JCog" },
+    { grupo: "🤸 Ombros", nome: "Elevação Lateral", meta: "3x12-15 repetições", videoId: "3VcKaXpzqRo" },
+
+    // BÍCEPS / TRÍCEPS
+    { grupo: "💥 Bíceps e Tríceps", nome: "Rosca Direta com Barra", meta: "3x10-12 repetições", videoId: "ykJmrZ5v0Oo" },
+    { grupo: "💥 Bíceps e Tríceps", nome: "Tríceps Testa", meta: "3x10-12 repetições", videoId: "d_KZxkY_0cM" },
+    { grupo: "💥 Bíceps e Tríceps", nome: "Tríceps Pulley", meta: "3x12-15 repetições", videoId: "2-LAMcpzODU" },
+
+    // ABDÔMEN
+    { grupo: "🔥 Abdômen e Core", nome: "Prancha Abdominal", meta: "3x30-60 segundos", videoId: "pSHjTRCQxIw" },
+    { grupo: "🔥 Abdômen e Core", nome: "Abdominal Crunch", meta: "3x15-20 repetições", videoId: "5ER5Of4MOPI" },
+];
+
+// ══════════════════════════════════════
+// DIVISÃO DOS TREINOS (A, B, C, D, E)
+// Define qual grupo muscular cai em qual
+// letra de treino, de acordo com a
+// quantidade de dias de treino da semana.
+// ══════════════════════════════════════
+const DIVISAO_TREINOS = {
+    3: { // A: Peito/Ombro/Tríceps (push) | B: Costas/Bíceps (pull) | C: Pernas/Abdômen
+        "💪 Peito": "A", "🤸 Ombros": "A", "💥 Bíceps e Tríceps": "A",
+        "🏋️ Costas": "B",
+        "🦵 Pernas": "C", "🔥 Abdômen e Core": "C"
+    },
+    4: { // A: Peito/Tríceps | B: Costas/Bíceps | C: Pernas | D: Ombros/Abdômen
+        "💪 Peito": "A", "💥 Bíceps e Tríceps": "A",
+        "🏋️ Costas": "B",
+        "🦵 Pernas": "C",
+        "🤸 Ombros": "D", "🔥 Abdômen e Core": "D"
+    },
+    5: { // A: Peito | B: Costas | C: Pernas | D: Ombros | E: Bíceps/Tríceps/Abdômen
+        "💪 Peito": "A",
+        "🏋️ Costas": "B",
+        "🦵 Pernas": "C",
+        "🤸 Ombros": "D",
+        "💥 Bíceps e Tríceps": "E", "🔥 Abdômen e Core": "E"
+    }
+};
+
+function obterDiasTreino() {
+    // Se já existe um plano gerado pelo chat, ele manda na quantidade de dias.
+    if (planoAtual && planoAtual.dias) {
+        const dias = parseInt(planoAtual.dias, 10);
+        if ([2, 3, 4, 5].includes(dias)) return dias;
+    }
+    const select = document.getElementById('perfil-dias');
+    const valor = (select && select.value) || localStorage.getItem('academia_dias_treino') || '5';
+    const dias = parseInt(valor, 10);
+    return [3, 4, 5].includes(dias) ? dias : 5;
+}
+
+// Busca no backend o plano de treino gerado pela IA no chat (se existir)
+// e redesenha a aba de Planos com ele — sem mudar o layout.
+async function carregarPlanoTreino() {
+    try {
+        const [respostaPlano, respostaCatalogo] = await Promise.all([
+            fetch('/obter_plano_customizado'),
+            fetch('/catalogo_exercicios')
+        ]);
+        const dados = await respostaPlano.json();
+        const catalogo = await respostaCatalogo.json();
+        planoAtual = dados.plano || null;
+        EXERCICIOS = catalogo.exercicios || [];
+        enriquecerPlanoComVideos(planoAtual, EXERCICIOS);
+    } catch (e) {
+        console.error('Erro ao carregar plano customizado:', e);
+        planoAtual = null;
+        EXERCICIOS = [];
+    }
+    atualizarAbasTreino();
+}
+
+// Planos antigos podem ter sido salvos sem o videoId. Antes de renderizar,
+// recuperamos o vídeo correspondente no catálogo atual pelo nome do exercício.
+// Assim, a regra vale para todas as abas (A até E), não apenas para o treino A.
+function enriquecerPlanoComVideos(plano, catalogo) {
+    if (!plano || !plano.treinos || !Array.isArray(catalogo)) return;
+
+    const normalizarNome = (nome) => String(nome || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+
+    const catalogoPorNome = new Map(
+        catalogo.map(exercicio => [normalizarNome(exercicio.nome), exercicio])
+    );
+
+    Object.values(plano.treinos).forEach(exercicios => {
+        if (!Array.isArray(exercicios)) return;
+        exercicios.forEach(exercicio => {
+            const referencia = catalogoPorNome.get(normalizarNome(exercicio.nome));
+            if (!referencia) return;
+
+            exercicio.videoId = exercicio.videoId || referencia.videoId || '';
+            exercicio.series_reps = exercicio.series_reps || referencia.meta || '';
+            exercicio.grupo = exercicio.grupo || referencia.grupo || '';
+        });
+    });
+}
+
+// Atualiza quais abas (A, B, C, D, E) ficam visíveis, sem alterar
+// a posição/ordem dos botões — apenas mostra/esconde cada um.
+function atualizarAbasTreino() {
+    const dias = obterDiasTreino();
+    if (!(planoAtual && planoAtual.dias)) {
+        localStorage.setItem('academia_dias_treino', dias);
+    }
+    const letras = ['A', 'B', 'C', 'D', 'E'].slice(0, dias);
+
+    document.querySelectorAll('.treino-tab').forEach(btn => {
+        const letra = btn.getAttribute('onclick').match(/selecionarTreino\('([A-E])'/)[1];
+        btn.style.display = letras.includes(letra) ? '' : 'none';
+    });
+
+    // Se o treino selecionado não existe mais na divisão atual, volta para A
+    if (!letras.includes(treinoSelecionado)) {
+        const btnA = document.querySelector(`.treino-tab[onclick*="selecionarTreino('A'"]`);
+        selecionarTreino('A', btnA);
+    } else {
+        construirListaExercicios();
+    }
+}
+
+function construirListaExercicios() {
+    const container = document.getElementById('lista-exercicios');
+    // A lista anterior é removida ao trocar de aba; portanto, não existe
+    // mais um vídeo aberto no DOM atual.
+    videoAberto = null;
+
+    // ── Prioridade 1: plano gerado pelo chat (AcademIA) ──
+    if (planoAtual && planoAtual.treinos && planoAtual.treinos[treinoSelecionado]) {
+        const exerciciosDoTreino = planoAtual.treinos[treinoSelecionado];
+        let htmlAtual = '';
+        let grupoAtual = '';
+
+        exerciciosDoTreino.forEach((ex, idx) => {
+            const idGlobal = `plano-${treinoSelecionado}-${idx}`;
+            if (ex.grupo !== grupoAtual) {
+                grupoAtual = ex.grupo;
+                htmlAtual += `<p style="color:var(--verde-claro);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">${grupoAtual}</p>`;
+            }
+            htmlAtual += `
+                <div class="exercicio-item">
+                    <div class="exercicio-header" onclick="toggleVideo('${idGlobal}')">
+                        <span class="exercicio-icone">▶️</span>
+                        <div class="exercicio-info">
+                            <div class="exercicio-nome">${ex.nome}</div>
+                            <div class="exercicio-meta">${ex.series_reps || ''}</div>
+                        </div>
+                        <span class="exercicio-seta" id="seta-${idGlobal}">›</span>
+                    </div>
+                    <div class="exercicio-video" id="video-${idGlobal}">
+                        <iframe
+                            id="iframe-${idGlobal}"
+                            src=""
+                            data-src="https://www.youtube.com/embed/${ex.videoId}?rel=0&modestbranding=1"
+                            title="${ex.nome}"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = htmlAtual || `<p style="color:var(--texto-secundario);font-style:italic;">Nenhum exercício cadastrado para este treino ainda.</p>`;
+        return;
+    }
+
+    // ── Prioridade 2 (fallback): catálogo estático, enquanto nenhum plano foi gerado no chat ──
+    const dias = obterDiasTreino();
+    const mapa = DIVISAO_TREINOS[dias];
+
+    const exerciciosDoTreino = EXERCICIOS.filter(ex => mapa[ex.grupo] === treinoSelecionado);
+
+    let htmlAtual = '';
+    let grupoAtual = '';
+
+    exerciciosDoTreino.forEach((ex) => {
+        const idx = EXERCICIOS.indexOf(ex);
+        if (ex.grupo !== grupoAtual) {
+            grupoAtual = ex.grupo;
+            htmlAtual += `<p style="color:var(--verde-claro);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;">${ex.grupo}</p>`;
+        }
+        htmlAtual += `
+            <div class="exercicio-item">
+                <div class="exercicio-header" onclick="toggleVideo(${idx})">
+                    <span class="exercicio-icone">▶️</span>
+                    <div class="exercicio-info">
+                        <div class="exercicio-nome">${ex.nome}</div>
+                        <div class="exercicio-meta">${ex.meta}</div>
+                    </div>
+                    <span class="exercicio-seta" id="seta-${idx}">›</span>
+                </div>
+                <div class="exercicio-video" id="video-${idx}">
+                    <iframe
+                        id="iframe-${idx}"
+                        src=""
+                        data-src="https://www.youtube.com/embed/${ex.videoId}?rel=0&modestbranding=1"
+                        title="${ex.nome}"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                    </iframe>
+                </div>
+            </div>
+        `;
+    });
+
+    if (!htmlAtual) {
+        htmlAtual = `<p style="color:var(--texto-secundario);font-style:italic;">Nenhum exercício cadastrado para este treino ainda.</p>`;
+    }
+
+    container.innerHTML = htmlAtual;
+}
+
+let videoAberto = null;
+
+function toggleVideo(idx) {
+    const videoDiv = document.getElementById(`video-${idx}`);
+    const seta = document.getElementById(`seta-${idx}`);
+    const iframe = document.getElementById(`iframe-${idx}`);
+
+    // Fecha o vídeo anterior se houver
+    if (videoAberto !== null && videoAberto !== idx) {
+        const vAnterior = document.getElementById(`video-${videoAberto}`);
+        const sAnterior = document.getElementById(`seta-${videoAberto}`);
+        const iAnterior = document.getElementById(`iframe-${videoAberto}`);
+        if (vAnterior) vAnterior.classList.remove('aberto');
+        if (sAnterior) sAnterior.classList.remove('aberto');
+        if (iAnterior) iAnterior.src = ''; // para o vídeo
+    }
+
+    const estaAberto = videoDiv.classList.contains('aberto');
+
+    if (estaAberto) {
+        // Fecha este vídeo
+        videoDiv.classList.remove('aberto');
+        seta.classList.remove('aberto');
+        iframe.src = '';
+        videoAberto = null;
+    } else {
+        // Abre este vídeo — carrega o src só agora (lazy loading)
+        videoDiv.classList.add('aberto');
+        seta.classList.add('aberto');
+        iframe.src = iframe.dataset.src;
+        videoAberto = idx;
+    }
+}
+
+// ══════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════
+
+async function fazerLogin() {
+    const usuario = document.getElementById('login-usuario').value.trim();
+    const erro = document.getElementById('login-erro');
+    if (!usuario) { erro.style.display='block'; return; }
+    erro.style.display = 'none';
+    const resp = await fetch('/login', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ usuario })
+    });
+    const dados = await resp.json();
+    if (dados.status === 'ok') {
+        document.getElementById('tela-login').style.display = 'none';
+        document.getElementById('app-principal').style.display = 'grid';
+        inicializarApp(usuario);
+    }
+}
+
+async function sair() {
+    await fetch('/logout', { method:'POST' });
+    location.reload();
+}
+
+async function verificarSessao() {
+    const resp = await fetch('/sessao_atual');
+    const dados = await resp.json();
+    if (dados.logado) {
+        document.getElementById('tela-login').style.display = 'none';
+        document.getElementById('app-principal').style.display = 'grid';
+        inicializarApp(dados.nome);
+    }
+}
+
+function inicializarApp(nomeUsuario) {
+    const iniciais = nomeUsuario.trim().split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+    document.getElementById('avatar-sidebar-iniciais').textContent = iniciais;
+    document.getElementById('nome-sidebar').textContent = nomeUsuario;
+    document.getElementById('chat-titulo').textContent = `Olá, ${nomeUsuario.split(' ')[0]}! 👋`;
+    carregarPerfil();
+    carregarHistoricoChat(nomeUsuario);
+    carregarProgresso();
+    carregarPlanoTreino();
+    exibirFraseDoDia(nomeUsuario);
+    document.getElementById('container-cronometro').innerHTML = getHTMLCronometro();
+}
+
+// ══════════════════════════════════════
+// ABAS
+// ══════════════════════════════════════
+
+function trocarTela(nomeTela, itemClicado) {
+    document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+    document.getElementById('tela-' + nomeTela).classList.add('ativa');
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    itemClicado.classList.add('active');
+    if (nomeTela === 'progresso')  carregarProgresso();
+    if (nomeTela === 'historico')  carregarHistorico();
+    if (nomeTela === 'conquistas') carregarConquistas();
+    if (nomeTela === 'planos')     { carregarResumoPlanos(); carregarPlanoTreino(); }
+}
+
+// ══════════════════════════════════════
+// CHAT
+// ══════════════════════════════════════
+
+const campoMensagem      = document.getElementById("campo-mensagem");
+const botaoEnviar        = document.getElementById("botao-enviar");
+const areaMensagens      = document.getElementById("mensagens");
+const indicadorDigitando = document.getElementById("digitando");
+
+function adicionarMensagem(texto, autor) {
+    const divMsg = document.createElement("div");
+    divMsg.className = `msg ${autor}`;
+    const divBolha = document.createElement("div");
+    divBolha.className = `bolha ${autor==="user" ? "user-bolha" : "bot-bolha"}`;
+    divBolha.textContent = texto;
+    divMsg.appendChild(divBolha);
+    areaMensagens.appendChild(divMsg);
+    areaMensagens.scrollTop = areaMensagens.scrollHeight;
+}
+
+async function carregarHistoricoChat(nomeUsuario) {
+    try {
+        const resp = await fetch('/carregar_historico_chat');
+        const dados = await resp.json();
+        areaMensagens.innerHTML = '';
+        if (dados.mensagens.length === 0) {
+            const primeiroNome = nomeUsuario ? nomeUsuario.trim().split(' ')[0] : '';
+            const saudacao = primeiroNome
+                ? `Olá, ${primeiroNome}! Eu sou o AcademIA 💪 Seu personal trainer virtual.\nVamos começar? Me conta seu objetivo com o treino!`
+                : 'Olá! Eu sou o AcademIA 💪 Seu personal trainer virtual.\nVamos começar? Me conta seu nome e objetivo!';
+            adicionarMensagem(saudacao, 'bot');
+        } else {
+            dados.mensagens.forEach(m => {
+                if (m.content) adicionarMensagem(m.content, m.role==='user' ? 'user' : 'bot');
+            });
+        }
+    } catch(e) {
+        adicionarMensagem('Olá! Eu sou o AcademIA 💪 Vamos começar?', 'bot');
+    }
+}
+
+async function enviarMensagem() {
+    const texto = campoMensagem.value.trim();
+    if (!texto) return;
+    adicionarMensagem(texto, "user");
+    campoMensagem.value = "";
+    botaoEnviar.disabled = true;
+    indicadorDigitando.style.display = "block";
+    areaMensagens.scrollTop = areaMensagens.scrollHeight;
+    try {
+        const resp = await fetch("/enviar_mensagem", {
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({ mensagem: texto })
+        });
+        const dados = await resp.json();
+        indicadorDigitando.style.display = "none";
+        adicionarMensagem(dados.resposta, "bot");
+
+        // O chat é a fonte do plano: sempre sincroniza a aba Planos após
+        // uma resposta, inclusive quando a alteração é uma atualização.
+        await carregarPlanoTreino();
+        if (dados.perfil_atualizado) {
+            carregarPerfil();
+        }
+    } catch(e) {
+        indicadorDigitando.style.display = "none";
+        adicionarMensagem("Erro de conexão. Verifique se o app.py está rodando.", "bot");
+    } finally {
+        botaoEnviar.disabled = false;
+        campoMensagem.focus();
+    }
+}
+
+botaoEnviar.addEventListener("click", enviarMensagem);
+campoMensagem.addEventListener("keypress", e => { if(e.key==="Enter") enviarMensagem(); });
+
+// ══════════════════════════════════════
+// PLANOS — CONCLUIR TREINO
+// ══════════════════════════════════════
+
+let treinoSelecionado = 'A';
+let planoAtual = null; // plano gerado pelo chat (AcademIA), via /obter_plano_customizado
+
+function selecionarTreino(letra, btn) {
+    treinoSelecionado = letra;
+    document.querySelectorAll('.treino-tab').forEach(b => b.classList.remove('ativo'));
+    btn.classList.add('ativo');
+    construirListaExercicios();
+}
+
+// Controle da nota por estrelas
+let notaSelecionada = 0;
+
+function selecionarEstrela(nota) {
+    notaSelecionada = nota;
+    document.querySelectorAll('.estrela-btn').forEach((s, i) => {
+        s.classList.toggle('ativa', i < nota);
+    });
+}
+
+async function salvarNota() {
+    if (notaSelecionada === 0) {
+        alert('Selecione uma nota antes de salvar!');
+        return;
+    }
+    const btnSalvar = document.getElementById('btn-salvar-nota');
+    const btnConcluir = document.getElementById('btn-concluir');
+    const msg = document.getElementById('msg-concluido');
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = 'Salvando...';
+    try {
+        const resp = await fetch('/concluir_treino', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ treino: treinoSelecionado, nota: notaSelecionada })
+        });
+        const dados = await resp.json();
+        document.getElementById('avaliacao-estrelas').style.display = 'none';
+        msg.textContent = `${dados.mensagem} Nota: ${'⭐'.repeat(notaSelecionada)} — Total: ${dados.totalTreinos} treinos!`;
+        msg.style.display = 'block';
+        atualizarNivel(dados.nivel, dados.totalTreinos);
+        document.getElementById('sidebar-treinos').textContent = dados.totalTreinos;
+        document.getElementById('planos-treinos').textContent  = dados.totalTreinos;
+        document.getElementById('planos-nivel').textContent    = `Nível ${dados.nivel}`;
+        carregarProgresso();
+        notaSelecionada = 0;
+        document.querySelectorAll('.estrela-btn').forEach(s => s.classList.remove('ativa'));
+        setTimeout(() => {
+            btnConcluir.disabled = false;
+            btnConcluir.textContent = '✅ Concluí o treino de hoje!';
+            msg.style.display = 'none';
+            btnSalvar.disabled = false;
+            btnSalvar.textContent = '💾 Salvar avaliação';
+        }, 4000);
+    } catch(e) {
+        btnSalvar.disabled = false;
+        btnSalvar.textContent = '💾 Salvar avaliação';
+    }
+}
+
+async function concluirTreino() {
+    const btn = document.getElementById('btn-concluir');
+    btn.disabled = true;
+    btn.textContent = '✅ Treino marcado! Avalie abaixo:';
+    const avaliacao = document.getElementById('avaliacao-estrelas');
+    avaliacao.style.display = 'block';
+    avaliacao.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function carregarResumoPlanos() {
+    try {
+        const resp = await fetch('/dados_progresso');
+        const dados = await resp.json();
+        document.getElementById('planos-treinos').textContent = dados.totalTreinos;
+        document.getElementById('planos-nivel').textContent   = `Nível ${dados.nivel}`;
+        document.getElementById('planos-nota').textContent    = dados.notaMedia;
+    } catch(e) {}
+}
+
+// ══════════════════════════════════════
+// NÍVEL / XP
+// ══════════════════════════════════════
+
+function atualizarNivel(nivel, totalTreinos) {
+    document.getElementById('nivel-sidebar').textContent = `Nível ${nivel}`;
+    const treinosNoNivel = totalTreinos % 5;
+    const pct = (treinosNoNivel / 5) * 100;
+    document.getElementById('xp-bar').style.width = pct + '%';
+    document.getElementById('xp-label').textContent = `${treinosNoNivel} / 5 treinos para o próximo nível`;
+}
+
+// ══════════════════════════════════════
+// PERFIL
+// ══════════════════════════════════════
+
+function preVisualizarFoto(event) {
+    const arquivo = event.target.files[0];
+    if (!arquivo) return;
+    const leitor = new FileReader();
+    leitor.onload = function(e) {
+        document.getElementById('avatar-iniciais').style.display = 'none';
+        const img = document.getElementById('avatar-img');
+        img.src = e.target.result; img.style.display = 'block';
+    };
+    leitor.readAsDataURL(arquivo);
+}
+
+// Atualiza o avatar do card lateral do chat (foto, se existir, senão iniciais).
+// É chamada tanto ao carregar o perfil quanto logo após salvar,
+// garantindo que carregarPerfil() = tela chat, e salvarPerfil() = idem.
+function atualizarAvatarSidebar(nome, caminhoFoto) {
+    if (nome) {
+        const partes = nome.trim().split(' ');
+        const ini = partes.length >= 2 ? partes[0][0] + partes[partes.length - 1][0] : partes[0][0];
+        document.getElementById('avatar-sidebar-iniciais').textContent = ini.toUpperCase();
+        document.getElementById('nome-sidebar').textContent = nome;
+    }
+    const imgSidebar = document.getElementById('avatar-sidebar-img');
+    const iniciaisSidebar = document.getElementById('avatar-sidebar-iniciais');
+    if (caminhoFoto) {
+        imgSidebar.src = caminhoFoto;
+        imgSidebar.style.display = 'block';
+        iniciaisSidebar.style.display = 'none';
+    } else {
+        imgSidebar.style.display = 'none';
+        iniciaisSidebar.style.display = 'block';
+    }
+}
+
+async function carregarPerfil() {
+    try {
+        const resp = await fetch('/carregar_perfil');
+        const dados = await resp.json();
+        document.getElementById('perfil-nome').value       = dados.nome       || '';
+        document.getElementById('perfil-idade').value      = dados.idade      || '';
+        document.getElementById('perfil-peso').value       = dados.peso       || '';
+        document.getElementById('perfil-altura').value     = dados.altura     || '';
+        document.getElementById('perfil-objetivo').value   = dados.objetivo   || '';
+        document.getElementById('perfil-local').value      = dados.local      || '';
+        document.getElementById('perfil-limitacoes').value = dados.limitacoes || '';
+        document.getElementById('perfil-dias').value = dados.dias || localStorage.getItem('academia_dias_treino') || '5';
+        atualizarAbasTreino();
+        if (dados.nome) {
+            const partes = dados.nome.trim().split(' ');
+            const ini = partes.length>=2 ? partes[0][0]+partes[partes.length-1][0] : partes[0][0];
+            document.getElementById('avatar-iniciais').textContent = ini.toUpperCase();
+        }
+        if (dados.foto) {
+            document.getElementById('avatar-iniciais').style.display='none';
+            const img = document.getElementById('avatar-img');
+            img.src = '/fotos/'+dados.foto; img.style.display='block';
+        }
+        atualizarAvatarSidebar(dados.nome, dados.foto ? '/fotos/'+dados.foto : null);
+    } catch(e) {}
+}
+
+async function salvarPerfil() {
+    const dados = {
+        nome: document.getElementById('perfil-nome').value,
+        idade: document.getElementById('perfil-idade').value,
+        peso: document.getElementById('perfil-peso').value,
+        altura: document.getElementById('perfil-altura').value,
+        objetivo: document.getElementById('perfil-objetivo').value,
+        local: document.getElementById('perfil-local').value,
+        limitacoes: document.getElementById('perfil-limitacoes').value,
+        dias: document.getElementById('perfil-dias').value,
+    };
+    localStorage.setItem('academia_dias_treino', dados.dias);
+    atualizarAbasTreino();
+    await fetch('/salvar_perfil', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(dados) });
+    const inputFoto = document.getElementById('input-foto');
+    if (inputFoto.files.length > 0) {
+        const fd = new FormData(); fd.append('foto', inputFoto.files[0]);
+        await fetch('/upload_foto', { method:'POST', body:fd });
+        inputFoto.value = '';
+    }
+    // Recarrega do servidor (nome, iniciais e a foto recém enviada) para que
+    // o avatar do card do chat fique sempre igual ao que está no Perfil.
+    await carregarPerfil();
+    const msg = document.getElementById('msg-salvo');
+    msg.style.display='block';
+    setTimeout(()=>msg.style.display='none',3000);
+}
+
+// ══════════════════════════════════════
+// HISTÓRICO
+// ══════════════════════════════════════
+
+async function carregarHistorico() {
+    try {
+        const resp = await fetch('/dados_progresso');
+        const dados = await resp.json();
+        const lista = document.getElementById('lista-historico');
+        const avaliacoes = dados.avaliacoes || [];
+        if (avaliacoes.length === 0) {
+            lista.innerHTML = '<p style="color:var(--texto-secundario);font-style:italic;">Nenhum treino registrado ainda.</p>';
+            return;
+        }
+        lista.innerHTML = [...avaliacoes].reverse().map(av => `
+            <div style="background:var(--fundo-msg-bot);border:1px solid var(--borda);padding:16px;border-radius:12px;">
+                <p style="margin-bottom:6px;"><strong style="color:var(--verde-claro);">📅 Data:</strong> ${av.data}</p>
+                <p style="margin-bottom:6px;"><strong>💪 Treino:</strong> Treino ${av.treino}</p>
+                <p><strong>⭐ Nota:</strong> ${av.nota}/5</p>
+            </div>
+        `).join('');
+    } catch(e) {
+        document.getElementById('lista-historico').innerHTML = '<p style="color:var(--texto-secundario);">Erro ao carregar.</p>';
+    }
+}
+
+// ══════════════════════════════════════
+// PROGRESSO
+// ══════════════════════════════════════
+
+let graficoInstancia = null;
+
+async function carregarProgresso() {
+    try {
+        const resp = await fetch('/dados_progresso');
+        const dados = await resp.json();
+        document.getElementById('stat-treinos').textContent    = dados.totalTreinos;
+        document.getElementById('stat-semanas').textContent    = dados.semanasAtivas;
+        document.getElementById('stat-nota').textContent       = dados.notaMedia;
+        document.getElementById('sidebar-treinos').textContent = dados.totalTreinos;
+        document.getElementById('sidebar-semanas').textContent = dados.semanasAtivas;
+        document.getElementById('sidebar-nota').textContent    = dados.notaMedia;
+        atualizarNivel(dados.nivel, dados.totalTreinos);
+        const canvas = document.getElementById('grafico-progresso');
+        if (typeof Chart === 'undefined') {
+            console.error('A biblioteca do gráfico não foi carregada.');
+            return;
+        }
+        const ctx = canvas.getContext('2d');
+        if (graficoInstancia) graficoInstancia.destroy();
+        graficoInstancia = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dados.grafico.semanas,
+                datasets: [{ label:'Treinos', data:dados.grafico.valores, backgroundColor:'#1a7a4a', borderRadius:6 }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend:{ display:false } },
+                scales: {
+                    y: { beginAtZero:true, ticks:{ color:'#aaaaaa', stepSize:1 }, grid:{ color:'#3a3a3a' } },
+                    x: { ticks:{ color:'#aaaaaa' }, grid:{ display:false } }
+                }
+            }
+        });
+    atualizarIndicadorSequencia(dados.avaliacoes || []);
+    const planoLocal = await fetch('/obter_plano_customizado').then(r=>r.json()).then(d=>d.plano).catch(()=>null);
+    sugerirProximoTreino(dados.avaliacoes || [], planoLocal);
+    } catch(e) { console.error(e); }
+}
+
+// ══════════════════════════════════════
+// CONQUISTAS
+// ══════════════════════════════════════
+
+async function carregarConquistas() {
+    try {
+        const resp = await fetch('/dados_progresso');
+        const dados = await resp.json();
+        const lista = document.getElementById('lista-conquistas');
+        const c = [];
+        if (dados.totalTreinos >= 1)  c.push({icone:'🏋️',titulo:'Primeiro treino!',desc:'Você deu o primeiro passo.'});
+        if (dados.totalTreinos >= 5)  c.push({icone:'🔥',titulo:'5 treinos!',desc:'Você subiu de nível!'});
+        if (dados.totalTreinos >= 10) c.push({icone:'💪',titulo:'10 treinos!',desc:'Consistência é tudo.'});
+        if (dados.totalTreinos >= 25) c.push({icone:'🏅',titulo:'25 treinos!',desc:'Você é dedicado!'});
+        if (dados.totalTreinos >= 50) c.push({icone:'🥇',titulo:'50 treinos!',desc:'Atleta de verdade!'});
+        if (dados.semanasAtivas >= 1) c.push({icone:'🏆',titulo:'Primeira semana completa!',desc:'Semana 1 concluída.'});
+        if (dados.semanasAtivas >= 4) c.push({icone:'📅',titulo:'Primeiro mês!',desc:'4 semanas de dedicação.'});
+        if (dados.notaMedia >= 4.5)   c.push({icone:'⭐',titulo:'Alta performance!',desc:'Nota média acima de 4.5.'});
+        if (c.length === 0) {
+            lista.innerHTML = '<p style="color:var(--texto-secundario);font-style:italic;">Nenhuma conquista ainda. Continue treinando!</p>';
+            return;
+        }
+        lista.innerHTML = c.map(x => `
+            <div class="conquista">
+                <span class="icone">${x.icone}</span>
+                <div><strong>${x.titulo}</strong><span>${x.desc}</span></div>
+            </div>
+        `).join('');
+        const ult = c[c.length-1];
+        document.getElementById('ultima-conquista').innerHTML = `
+            <span class="icone">${ult.icone}</span>
+            <div><strong>${ult.titulo}</strong><span>${ult.desc}</span></div>
+        `;
+    } catch(e) {}
+}
+
+// ══════════════════════════════════════
+// INICIALIZAÇÃO
+// ══════════════════════════════════════
+
+
+// ══════════════════════════════════════════════════════════════════
+// FUNCIONALIDADE 1: FRASE MOTIVACIONAL DO DIA
+// Muda automaticamente todo dia, personalizada com o nome do usuário
+// ══════════════════════════════════════════════════════════════════
+
+const FRASES_MOTIVACIONAIS = [
+    "Cada treino é um passo mais perto do seu melhor.",
+    "O corpo conquista o que a mente acredita.",
+    "Dor de hoje, força de amanhã.",
+    "Não pare quando estiver cansado. Pare quando terminar.",
+    "O único treino ruim é o que não aconteceu.",
+    "Seja mais forte que sua melhor desculpa.",
+    "Resultados acontecem fora da zona de conforto.",
+    "Consistência bate perfeição todos os dias.",
+    "Você não precisa ser perfeito. Precisa ser consistente.",
+    "Cada série completa é uma vitória.",
+    "Seu único concorrente é quem você era ontem.",
+    "Comece. O resto vem com o tempo.",
+    "Pequenos progressos ainda são progressos.",
+    "A disciplina é a ponte entre metas e conquistas.",
+    "Hoje você vai se orgulhar do esforço de ontem.",
+    "Treinar é um presente que você dá ao seu futuro.",
+    "A força não vem da capacidade física. Vem de uma vontade indomável.",
+    "Acredite no processo. Os resultados virão.",
+    "Não se compare. Evolua.",
+    "Cada gota de suor é um investimento em você mesmo.",
+    "O sucesso não é um acidente. É trabalho duro.",
+    "Você é mais forte do que pensa.",
+    "Um treino de cada vez. Um dia de cada vez.",
+    "Sua saúde é sua maior riqueza.",
+    "Comece devagar. Mas comece.",
+    "A jornada de mil quilômetros começa com um passo.",
+    "Supere-se hoje para agradecer amanhã.",
+    "Não existe atalho para qualquer lugar que valha a pena ir.",
+    "O esforço de hoje é o resultado de amanhã.",
+    "Levante, respire, treine. Repita."
+];
+
+function exibirFraseDoDia(nomeUsuario) {
+    // Usa o dia do ano como índice — troca a frase automaticamente todo dia
+    const agora = new Date();
+    const iniciodoAno = new Date(agora.getFullYear(), 0, 0);
+    const diaDoAno = Math.floor((agora - iniciodoAno) / (1000 * 60 * 60 * 24));
+    const frase = FRASES_MOTIVACIONAIS[diaDoAno % FRASES_MOTIVACIONAIS.length];
+    const primeiroNome = nomeUsuario ? nomeUsuario.trim().split(' ')[0] : '';
+    const container = document.getElementById('frase-do-dia');
+    if (container) {
+        container.innerHTML = `<span style="color:var(--verde-claro);font-size:13px;">💡 ${primeiroNome ? primeiroNome + ', ' : ''}${frase}</span>`;
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FUNCIONALIDADE 2: INDICADOR DE SEQUÊNCIA (STREAK)
+// Mostra quantos dias seguidos o usuário treinou — igual ao Duolingo 🔥
+// ══════════════════════════════════════════════════════════════════
+
+function calcularSequencia(avaliacoes) {
+    if (!avaliacoes || avaliacoes.length === 0) return 0;
+    const datasUnicas = [...new Set(avaliacoes.map(a => a.data))].sort().reverse();
+    if (datasUnicas.length === 0) return 0;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    let sequencia = 0;
+    let diaAtual = new Date(hoje);
+    for (const dataStr of datasUnicas) {
+        const dataTreino = new Date(dataStr + 'T00:00:00');
+        const diffDias = Math.round((diaAtual - dataTreino) / (1000 * 60 * 60 * 24));
+        if (diffDias === 0) {
+            sequencia++;
+            diaAtual.setDate(diaAtual.getDate() - 1);
+        } else if (diffDias === 1) {
+            sequencia++;
+            diaAtual = new Date(dataTreino);
+            diaAtual.setDate(diaAtual.getDate() - 1);
+        } else {
+            break;
+        }
+    }
+    return sequencia;
+}
+
+function atualizarIndicadorSequencia(avaliacoes) {
+    const seq = calcularSequencia(avaliacoes);
+    const container = document.getElementById('indicador-sequencia');
+    if (!container) return;
+    if (seq === 0) {
+        container.innerHTML = `<span style="font-size:12px;color:var(--texto-secundario);">Comece sua sequência hoje! 💪</span>`;
+    } else if (seq === 1) {
+        container.innerHTML = `<span style="font-size:12px;color:var(--verde-claro);">🔥 Sequência de <strong>${seq} dia</strong> — continue amanhã!</span>`;
+    } else {
+        container.innerHTML = `<span style="font-size:12px;color:#f5a623;">🔥 <strong>${seq} dias seguidos</strong>! Incrível!</span>`;
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FUNCIONALIDADE 3: PRÓXIMO TREINO SUGERIDO
+// Baseado no histórico, sugere qual treino fazer hoje
+// ══════════════════════════════════════════════════════════════════
+
+function sugerirProximoTreino(avaliacoes, plano) {
+    const container = document.getElementById('proximo-treino-sugerido');
+    if (!container) return;
+    if (!plano || !plano.treinos) {
+        container.innerHTML = `<span style="font-size:12px;color:var(--texto-secundario);">Peça um plano no chat para ver sugestões!</span>`;
+        return;
+    }
+    const letras = Object.keys(plano.treinos).sort();
+    if (avaliacoes.length === 0) {
+        container.innerHTML = `
+            <span style="font-size:12px;color:var(--texto-secundario);">Próximo treino:</span>
+            <strong style="color:var(--verde-claro);font-size:15px;">Treino ${letras[0]}</strong>
+            <span style="font-size:11px;color:var(--texto-secundario);">Seu primeiro treino te espera! 🚀</span>`;
+        return;
+    }
+    const ultimoTreino = avaliacoes[avaliacoes.length - 1];
+    const indiceAtual = letras.indexOf(ultimoTreino.treino);
+    const proximaLetra = letras[(indiceAtual + 1) % letras.length];
+    const hoje = new Date().toISOString().split('T')[0];
+    const treinouHoje = avaliacoes.some(a => a.data === hoje);
+    if (treinouHoje) {
+        container.innerHTML = `
+            <span style="font-size:12px;color:var(--verde-claro);">✅ Você já treinou hoje!</span>
+            <strong style="color:var(--texto-secundario);font-size:13px;">Próximo: Treino ${proximaLetra}</strong>`;
+    } else {
+        container.innerHTML = `
+            <span style="font-size:12px;color:var(--texto-secundario);">Próximo treino sugerido:</span>
+            <strong style="color:var(--verde-claro);font-size:16px;">Treino ${proximaLetra}</strong>
+            <span style="font-size:11px;color:var(--texto-secundario);">Baseado no seu histórico 📊</span>`;
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FUNCIONALIDADE 4: CRONÔMETRO DE DESCANSO ENTRE SÉRIES
+// Timer com bipe sonoro ao terminar — sem precisar de arquivo de som
+// ══════════════════════════════════════════════════════════════════
+
+let timerIntervalo = null;
+let timerSegundos = 0;
+let timerRodando = false;
+
+function iniciarTimer(segundos) {
+    if (timerIntervalo) clearInterval(timerIntervalo);
+    timerSegundos = segundos;
+    timerRodando = true;
+    atualizarDisplayTimer();
+    timerIntervalo = setInterval(() => {
+        timerSegundos--;
+        atualizarDisplayTimer();
+        if (timerSegundos <= 0) {
+            clearInterval(timerIntervalo);
+            timerRodando = false;
+            tocarAlertaTimer();
+            const d = document.getElementById('timer-display');
+            if (d) { d.style.color = 'var(--verde-claro)'; d.textContent = '✅ Descanse concluído!'; }
+        }
+    }, 1000);
+}
+
+function pararTimer() {
+    if (timerIntervalo) clearInterval(timerIntervalo);
+    timerRodando = false;
+    const d = document.getElementById('timer-display');
+    if (d) { d.textContent = 'Timer pausado'; d.style.color = 'var(--texto-secundario)'; }
+}
+
+function atualizarDisplayTimer() {
+    const min = Math.floor(timerSegundos / 60);
+    const seg = timerSegundos % 60;
+    const d = document.getElementById('timer-display');
+    if (d) {
+        d.textContent = `${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
+        d.style.color = timerSegundos <= 10 ? '#ff6b6b' : 'var(--texto)';
+    }
+}
+
+function tocarAlertaTimer() {
+    // Gera um bipe usando a Web Audio API — sem arquivo de som externo
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 880;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.3);
+            }, i * 400);
+        }
+    } catch(e) {}
+}
+
+function getHTMLCronometro() {
+    return `
+    <div style="background:var(--fundo-painel);border:1px solid var(--borda);border-radius:14px;padding:20px;margin-bottom:20px;max-width:680px;">
+        <h3 style="color:var(--verde-claro);font-size:16px;margin-bottom:12px;">⏱️ Cronômetro de Descanso</h3>
+        <div id="timer-display" style="font-size:48px;font-weight:700;text-align:center;letter-spacing:4px;margin:12px 0;color:var(--texto);">01:00</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;">
+            <button onclick="iniciarTimer(30)"  style="padding:8px 16px;border-radius:8px;background:var(--fundo-msg-bot);border:1px solid var(--borda);color:var(--texto);cursor:pointer;font-size:13px;">30s</button>
+            <button onclick="iniciarTimer(60)"  style="padding:8px 16px;border-radius:8px;background:var(--verde);border:1px solid var(--verde);color:white;cursor:pointer;font-size:13px;font-weight:600;">1 min</button>
+            <button onclick="iniciarTimer(90)"  style="padding:8px 16px;border-radius:8px;background:var(--fundo-msg-bot);border:1px solid var(--borda);color:var(--texto);cursor:pointer;font-size:13px;">1:30</button>
+            <button onclick="iniciarTimer(120)" style="padding:8px 16px;border-radius:8px;background:var(--fundo-msg-bot);border:1px solid var(--borda);color:var(--texto);cursor:pointer;font-size:13px;">2 min</button>
+            <button onclick="pararTimer()"      style="padding:8px 16px;border-radius:8px;background:#3a1a1a;border:1px solid #ff6b6b;color:#ff6b6b;cursor:pointer;font-size:13px;">⏹ Parar</button>
+        </div>
+        <p style="text-align:center;font-size:12px;color:var(--texto-secundario);">Clique em um tempo e descanse. Um bipe vai avisar quando acabar!</p>
+    </div>`;
+}
+
+window.addEventListener('load', verificarSessao);
+</script>
+</body>
+</html>
